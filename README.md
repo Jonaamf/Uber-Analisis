@@ -1,4 +1,4 @@
-# 🚗 Uber Rides Analytics — Dashboard Operativo 2024
+# 🚗 Uber Rides Analytics — Dashboard Operativo
 
 Análisis completo de las operaciones de Uber durante el año 2024, con foco en rendimiento de la flota, comportamiento de cancelaciones, ingresos por tipo de vehículo y eficiencia operativa.
 
@@ -88,7 +88,7 @@ El dataset contiene **150.000 registros** de viajes realizados entre el **1 de e
 
 ## 🔗 Dashboard interactivo
 
-> 📌 [Ver dashboard en Looker →](https://lookerstudio.google.com/TU-LINK-AQUI)
+> 📌 [Ver dashboard en Looker →](https://datastudio.google.com/reporting/5b85dc65-c6d7-419a-ab90-09ed4d1a84e2)
 
 El dashboard incluye tres vistas:
 1. **Vista ejecutiva** — KPIs generales, tendencia mensual y distribución por estado
@@ -108,8 +108,5 @@ El dashboard incluye tres vistas:
 
 ## 👤 Autor
 
-**Tu Nombre**
+**Jonathan Manzolido**
 Estudiante de Análisis de Datos
-
-[![LinkedIn](https://img.shields.io/badge/LinkedIn-Conectar-blue?logo=linkedin)](https://linkedin.com/in/tu-perfil)
-[![GitHub](https://img.shields.io/badge/GitHub-Ver_perfil-black?logo=github)](https://github.com/tu-usuario)
