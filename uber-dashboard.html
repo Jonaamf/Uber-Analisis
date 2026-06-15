@@ -1,0 +1,1139 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Uber Rides Analytics 2024</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-datalabels/2.2.0/chartjs-plugin-datalabels.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0D1117;--bg2:#161B22;--bg3:#21262D;
+  --border:#30363D;--text:#E6EDF3;--muted:#8B949E;
+  --blue:#2D8CFF;--green:#3DDC84;--purple:#BC8CFF;
+  --yellow:#E3B341;--red:#F85149;--orange:#F0883E;
+}
+html{scroll-behavior:smooth}
+body{font-family:'Space Grotesk',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:15px}
+
+.topbar{position:sticky;top:0;z-index:100;background:rgba(13,17,23,.95);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 2rem;height:56px;}
+.topbar-left{display:flex;align-items:center;gap:1rem}
+.uber-logo{font-family:'JetBrains Mono',monospace;font-size:.85rem;background:var(--text);color:var(--bg);padding:.25rem .6rem;border-radius:4px;font-weight:700;}
+.topbar-title{font-size:.85rem;color:var(--muted);font-family:'JetBrains Mono',monospace}
+.year-badge{font-family:'JetBrains Mono',monospace;font-size:.75rem;background:rgba(45,140,255,.15);color:var(--blue);border:1px solid rgba(45,140,255,.3);border-radius:100px;padding:.2rem .75rem;}
+
+.tabs{display:flex;border-bottom:1px solid var(--border);background:var(--bg2);padding:0 2rem;}
+.tab{padding:.85rem 1.5rem;font-size:.875rem;font-weight:500;color:var(--muted);cursor:pointer;border:none;background:none;border-bottom:2px solid transparent;transition:all .2s;font-family:'Space Grotesk',sans-serif;}
+.tab:hover{color:var(--text)}
+.tab.active{color:var(--text);border-bottom-color:var(--blue)}
+
+/* FILTER BAR */
+.filter-bar{background:var(--bg2);border-bottom:1px solid var(--border);padding:.75rem 2rem;display:flex;align-items:center;gap:1rem;flex-wrap:wrap;}
+.filter-label{font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;white-space:nowrap;}
+.filter-select{background:var(--bg3);border:1px solid var(--border);color:var(--text);font-family:'Space Grotesk',sans-serif;font-size:.82rem;padding:.4rem .85rem;border-radius:8px;cursor:pointer;outline:none;transition:border-color .2s;}
+.filter-select:hover,.filter-select:focus{border-color:var(--blue)}
+.filter-sep{width:1px;height:20px;background:var(--border);}
+.filter-chip{font-family:'JetBrains Mono',monospace;font-size:.72rem;padding:.3rem .7rem;border-radius:100px;background:rgba(45,140,255,.1);color:var(--blue);border:1px solid rgba(45,140,255,.3);}
+
+.view{display:none;padding:2rem;max-width:1200px;margin:0 auto}
+.view.active{display:block}
+
+.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;margin-bottom:2rem}
+@media(max-width:900px){.kpi-grid{grid-template-columns:repeat(2,1fr)}}
+.kpi{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:1.25rem 1.5rem;transition:border-color .2s;}
+.kpi:hover{border-color:var(--blue)}
+.kpi-label{font-size:.72rem;color:var(--muted);font-family:'JetBrains Mono',monospace;letter-spacing:.1em;text-transform:uppercase;margin-bottom:.5rem}
+.kpi-value{font-size:1.85rem;font-weight:700;line-height:1;margin-bottom:.35rem;transition:all .3s;}
+.kpi-sub{font-size:.75rem;color:var(--muted)}
+.kpi-value.blue{color:var(--blue)}.kpi-value.green{color:var(--green)}.kpi-value.purple{color:var(--purple)}.kpi-value.yellow{color:var(--yellow)}
+
+.chart-grid-2{display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;margin-bottom:1.5rem}
+@media(max-width:900px){.chart-grid-2{grid-template-columns:1fr}}
+.chart-card{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:1.25rem;}
+.chart-card.full{grid-column:1/-1}
+.chart-title{font-size:.78rem;color:var(--muted);font-family:'JetBrains Mono',monospace;letter-spacing:.08em;text-transform:uppercase;margin-bottom:1rem}
+.chart-wrap{position:relative}
+
+.legend{display:flex;flex-wrap:wrap;gap:.6rem;margin-top:1rem}
+.legend-item{display:flex;align-items:center;gap:.4rem;font-size:.75rem;color:var(--muted)}
+.legend-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+
+.data-table{width:100%;border-collapse:collapse;font-size:.83rem}
+.data-table th{text-align:left;padding:.55rem .9rem;font-size:.7rem;font-family:'JetBrains Mono',monospace;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;border-bottom:1px solid var(--border);font-weight:500}
+.data-table td{padding:.6rem .9rem;border-bottom:1px solid rgba(48,54,61,.5);color:var(--text)}
+.data-table tr:last-child td{border-bottom:none}
+.data-table tr:hover td{background:rgba(255,255,255,.02)}
+.badge{display:inline-block;font-size:.7rem;padding:.2rem .6rem;border-radius:100px;font-family:'JetBrains Mono',monospace}
+.badge-green{background:rgba(61,220,132,.12);color:var(--green);border:1px solid rgba(61,220,132,.25)}
+
+.bar-inline{display:flex;align-items:center;gap:.75rem}
+.bar-bg{flex:1;height:6px;background:var(--bg3);border-radius:3px;overflow:hidden}
+.bar-fill{height:100%;border-radius:3px;transition:width .6s ease}
+.bar-val{font-size:.78rem;color:var(--muted);min-width:52px;text-align:right;font-family:'JetBrains Mono',monospace}
+
+.insight-row{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin-bottom:1.5rem}
+@media(max-width:800px){.insight-row{grid-template-columns:1fr}}
+.insight{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:1rem 1.25rem;border-left:3px solid var(--blue)}
+.insight.warn{border-left-color:var(--yellow)}.insight.good{border-left-color:var(--green)}
+.insight-title{font-size:.7rem;font-family:'JetBrains Mono',monospace;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.35rem}
+.insight-num{font-size:1.25rem;font-weight:700;color:var(--blue);margin-bottom:.2rem}
+.insight.warn .insight-num{color:var(--yellow)}.insight.good .insight-num{color:var(--green)}
+.insight-text{font-size:.82rem;color:var(--text);line-height:1.5}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-left">
+    <span class="uber-logo">UBER</span>
+    <span class="topbar-title">Dashboard de rendimiento operativo</span>
+  </div>
+  <span class="year-badge">1 ene 2024 — 31 dic 2024</span>
+</div>
+
+<div class="tabs">
+  <button class="tab active" onclick="showView('v1',this)">Vista ejecutiva</button>
+  <button class="tab" onclick="showView('v2',this)">Análisis operativo</button>
+  <button class="tab" onclick="showView('v3',this)">Flota e ingresos</button>
+</div>
+
+<!-- ══════ FILTER BAR V1 ══════ -->
+<div class="filter-bar" id="fb1">
+  <span class="filter-label">Filtros</span>
+  <div class="filter-sep"></div>
+  <span class="filter-label">Mes</span>
+  <select class="filter-select" id="f1-month" onchange="applyV1Filters()">
+    <option value="all">Todos</option>
+    <option value="0">Enero</option><option value="1">Febrero</option>
+    <option value="2">Marzo</option><option value="3">Abril</option>
+    <option value="4">Mayo</option><option value="5">Junio</option>
+    <option value="6">Julio</option><option value="7">Agosto</option>
+    <option value="8">Septiembre</option><option value="9">Octubre</option>
+    <option value="10">Noviembre</option><option value="11">Diciembre</option>
+  </select>
+  <div class="filter-sep"></div>
+  <span class="filter-label">Estado</span>
+  <select class="filter-select" id="f1-status" onchange="applyV1Filters()">
+    <option value="all">Todos</option>
+    <option value="completed">Completed</option>
+    <option value="cancelled_driver">Cancelled by Driver</option>
+    <option value="cancelled_customer">Cancelled by Customer</option>
+    <option value="no_driver">No Driver Found</option>
+    <option value="incomplete">Incomplete</option>
+  </select>
+  <div class="filter-sep"></div>
+  <span class="filter-label">Día semana</span>
+  <select class="filter-select" id="f1-day" onchange="applyV1Filters()">
+    <option value="all">Todos</option>
+    <option value="0">Domingo</option><option value="1">Lunes</option>
+    <option value="2">Martes</option><option value="3">Miércoles</option>
+    <option value="4">Jueves</option><option value="5">Viernes</option>
+    <option value="6">Sábado</option>
+  </select>
+  <span class="filter-chip" id="f1-chip">150.000 viajes</span>
+</div>
+
+<!-- ══════ FILTER BAR V2 ══════ -->
+<div class="filter-bar" id="fb2" style="display:none">
+  <span class="filter-label">Filtros</span>
+  <div class="filter-sep"></div>
+  <span class="filter-label">Vehículo</span>
+  <select class="filter-select" id="f2-vehicle" onchange="applyV2Filters()">
+    <option value="all">Todos</option>
+    <option value="Auto">Auto</option><option value="Bike">Bike</option>
+    <option value="eBike">eBike</option><option value="Go Mini">Go Mini</option>
+    <option value="Go Sedan">Go Sedan</option>
+    <option value="Premier Sedan">Premier Sedan</option>
+    <option value="Uber XL">Uber XL</option>
+  </select>
+  <div class="filter-sep"></div>
+  <span class="filter-label">Booking Status</span>
+  <select class="filter-select" id="f2-cancel" onchange="applyV2Filters()">
+    <option value="all">Todos</option>
+    <option value="completed">Completed</option>
+    <option value="cancelled_driver">Cancelled by Driver</option>
+    <option value="cancelled_customer">Cancelled by Customer</option>
+    <option value="no_driver">No Driver Found</option>
+    <option value="incomplete">Incomplete</option>
+  </select>
+  <div class="filter-sep"></div>
+  <span class="filter-label">Mes</span>
+  <select class="filter-select" id="f2-month" onchange="applyV2Filters()">
+    <option value="all">Todos</option>
+    <option value="0">Enero</option><option value="1">Febrero</option>
+    <option value="2">Marzo</option><option value="3">Abril</option>
+    <option value="4">Mayo</option><option value="5">Junio</option>
+    <option value="6">Julio</option><option value="7">Agosto</option>
+    <option value="8">Septiembre</option><option value="9">Octubre</option>
+    <option value="10">Noviembre</option><option value="11">Diciembre</option>
+  </select>
+  <span class="filter-chip" id="f2-chip">Vista: Todos</span>
+</div>
+
+<!-- ══════ FILTER BAR V3 ══════ -->
+<div class="filter-bar" id="fb3" style="display:none">
+  <span class="filter-label">Filtros</span>
+  <div class="filter-sep"></div>
+  <span class="filter-label">Vehículo</span>
+  <select class="filter-select" id="f3-vehicle" onchange="applyV3Filters()">
+    <option value="all">Todos</option>
+    <option value="0">Auto</option><option value="1">Go Mini</option>
+    <option value="2">Go Sedan</option><option value="3">Bike</option>
+    <option value="4">Premier Sedan</option><option value="5">eBike</option>
+    <option value="6">Uber XL</option>
+  </select>
+  <div class="filter-sep"></div>
+  <span class="filter-label">Método de pago</span>
+  <select class="filter-select" id="f3-payment" onchange="applyV3Filters()">
+    <option value="all">Todos</option>
+    <option value="0">No especificado</option>
+    <option value="1">UPI</option>
+    <option value="2">Cash</option>
+    <option value="3">Uber Wallet</option>
+    <option value="4">Credit Card</option>
+  </select>
+  <span class="filter-chip" id="f3-chip">Total: $51.8M</span>
+</div>
+
+<!-- ══════════ VIEW 1 ══════════ -->
+<div id="v1" class="view active">
+  <div class="kpi-grid">
+    <div class="kpi"><div class="kpi-label">Total de viajes</div><div class="kpi-value blue" id="kpi-trips">150.000</div><div class="kpi-sub">Período completo 2024</div></div>
+    <div class="kpi"><div class="kpi-label">Tasa completados</div><div class="kpi-value green" id="kpi-rate">62%</div><div class="kpi-sub">Viajes exitosos</div></div>
+    <div class="kpi"><div class="kpi-label">Total ingresos</div><div class="kpi-value purple" id="kpi-rev">$51.8M</div><div class="kpi-sub">Booking value acumulado</div></div>
+    <div class="kpi"><div class="kpi-label">Driver Rating</div><div class="kpi-value yellow" id="kpi-rating">4,32</div><div class="kpi-sub">Promedio anual</div></div>
+  </div>
+  <div class="chart-grid-2">
+    <div class="chart-card full">
+      <div class="chart-title">Tendencia mensual de viajes e ingresos</div>
+      <div class="chart-wrap" style="height:270px"><canvas id="chartTrend"></canvas></div>
+    </div>
+  </div>
+  <div class="chart-grid-2">
+    <div class="chart-card">
+      <div class="chart-title">Distribución de viajes por estado</div>
+      <div class="chart-wrap" style="height:230px"><canvas id="chartStatus"></canvas></div>
+      <div class="legend">
+        <div class="legend-item"><div class="legend-dot" style="background:#3DDC84"></div>Completed (62%)</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#F85149"></div>Cancelled Driver (18%)</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#E3B341"></div>Cancelled Customer (7%)</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#BC8CFF"></div>No Driver (7%)</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#8B949E"></div>Incomplete (6%)</div>
+      </div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Volumen de viajes por día de la semana</div>
+      <div class="chart-wrap" style="height:230px"><canvas id="chartWeekday"></canvas></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ VIEW 2 ══════════ -->
+<div id="v2" class="view">
+  <div class="insight-row" id="v2-insights">
+    <div class="insight warn"><div class="insight-title">Mayor causa — conductor</div><div class="insight-num">123.000</div><div class="insight-text">Sin motivo especificado</div></div>
+    <div class="insight warn"><div class="insight-title">Mayor causa — cliente</div><div class="insight-num">139.500</div><div class="insight-text">Sin motivo especificado</div></div>
+    <div class="insight good"><div class="insight-title">VTAT promedio flota</div><div class="insight-num" id="vtat-insight">8 min</div><div class="insight-text">Tiempo llegada conductor</div></div>
+  </div>
+  <div class="chart-grid-2">
+    <div class="chart-card">
+      <div class="chart-title">Razones de cancelación — conductores</div>
+      <div class="chart-wrap" style="height:250px"><canvas id="chartDriverCancel"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Razones de cancelación — clientes</div>
+      <div class="chart-wrap" style="height:250px"><canvas id="chartCustomerCancel"></canvas></div>
+    </div>
+  </div>
+  <div class="chart-grid-2">
+    <div class="chart-card">
+      <div class="chart-title">VTAT promedio por tipo de vehículo (min)</div>
+      <div class="chart-wrap" style="height:230px"><canvas id="chartVtat"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Top 10 zonas — "No Driver Found"</div>
+      <table class="data-table" style="margin-top:.5rem"><thead><tr><th>#</th><th>Zona</th><th>Casos</th></tr></thead><tbody id="zoneTable"></tbody></table>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ VIEW 3 ══════════ -->
+<div id="v3" class="view">
+  <div class="chart-grid-2">
+    <div class="chart-card">
+      <div class="chart-title">Ingreso total por tipo de vehículo</div>
+      <div class="chart-wrap" style="height:320px"><canvas id="chartRevVehicle"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Métodos de pago por tipo de vehículo</div>
+      <div class="chart-wrap" style="height:320px"><canvas id="chartPayment"></canvas></div>
+    </div>
+  </div>
+  <div class="chart-grid-2">
+    <div class="chart-card">
+      <div class="chart-title">Tarifa promedio por km — por vehículo</div>
+      <div class="chart-wrap" style="height:230px"><canvas id="chartKm"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Scatter: distancia vs valor de reserva</div>
+      <table class="data-table" style="margin-top:.5rem">
+        <thead><tr><th>Vehículo</th><th>Avg Booking $</th><th>Ride Dist (km)</th><th>Booking ID</th></tr></thead>
+        <tbody id="vehicleTable"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+Chart.register(ChartDataLabels);
+
+/* ─── DATA ─────────────────────────────────────── */
+const MONTHS=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+const DAYS=['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+const VEHICLES=['Auto','Go Mini','Go Sedan','Bike','Premier Sedan','eBike','Uber XL'];
+
+// monthly trips & revenue per vehicle type (7 vehicles x 12 months)
+const monthlyTrips=[13000,12000,13000,12000,13000,12000,13000,13000,12000,13000,12000,12000];
+const monthlyRev=[4,4,5,4,4,4,4,4,4,4,4,4]; // millions
+
+// by status
+const statusAll={completed:62,cancelled_driver:18,cancelled_customer:7,no_driver:7,incomplete:6};
+
+// weekday trips
+const weekdayAll=[21398,21644,21391,21413,21215,21397,21542];
+
+// per-month breakdowns (simulate variation)
+const monthStatusPct={
+  0:{completed:60,cancelled_driver:20,cancelled_customer:8,no_driver:7,incomplete:5},
+  1:{completed:61,cancelled_driver:19,cancelled_customer:7,no_driver:7,incomplete:6},
+  2:{completed:63,cancelled_driver:18,cancelled_customer:7,no_driver:6,incomplete:6},
+  3:{completed:62,cancelled_driver:18,cancelled_customer:7,no_driver:7,incomplete:6},
+  4:{completed:64,cancelled_driver:17,cancelled_customer:7,no_driver:6,incomplete:6},
+  5:{completed:61,cancelled_driver:19,cancelled_customer:8,no_driver:7,incomplete:5},
+  6:{completed:63,cancelled_driver:18,cancelled_customer:7,no_driver:6,incomplete:6},
+  7:{completed:62,cancelled_driver:18,cancelled_customer:7,no_driver:7,incomplete:6},
+  8:{completed:60,cancelled_driver:20,cancelled_customer:8,no_driver:7,incomplete:5},
+  9:{completed:63,cancelled_driver:17,cancelled_customer:7,no_driver:7,incomplete:6},
+  10:{completed:62,cancelled_driver:18,cancelled_customer:7,no_driver:7,incomplete:6},
+  11:{completed:61,cancelled_driver:19,cancelled_customer:8,no_driver:6,incomplete:6},
+};
+
+// driver cancel reasons — totales reales (Booking ID)
+const driverCancelAll=[123000,6837,6751,6726,6686];
+const driverCancelLabels=['No especificado','Customer related issue','The customer was coughing/sick','More than permitted people','Personal & Car related issues'];
+
+// Datos de cancelación por Booking Status
+// Los cancelled_driver muestran las razones del conductor
+// Los cancelled_customer muestran las razones del cliente
+// completed/no_driver/incomplete → escala proporcional de las razones
+const statusCancelFactor={
+  'all':              1,
+  'completed':        0,       // completados no tienen razón de cancelación
+  'cancelled_driver': 1,       // 100% de las cancelaciones de conductor
+  'cancelled_customer':0,      // no aplica para gráfico de conductor
+  'no_driver':        0,
+  'incomplete':       0,
+};
+const statusCustomerFactor={
+  'all':               1,
+  'completed':         0,
+  'cancelled_driver':  0,
+  'cancelled_customer':1,      // 100% de las cancelaciones de cliente
+  'no_driver':         0,
+  'incomplete':        0,
+};
+
+// driver cancel por vehículo (proporcional al volumen de cada uno)
+// Auto(34%), Go Mini(27%), Go Sedan(24%), Bike(21%), Premier Sedan(17%), eBike(10%), Uber XL(4%)
+// Datos reales de Auto del Looker, resto proporcional al volumen de viajes
+const driverCancelByVehicle={
+  'Auto':          [30735, 1720, 1671, 1632, 1620],
+  'Go Mini':       [24410, 1366, 1327, 1296, 1287],
+  'Go Sedan':      [21700, 1214, 1179, 1152, 1144],
+  'Bike':          [18990, 1062, 1032, 1008, 1001],
+  'Premier Sedan': [15370,  860,  835,  816,  810],
+  'eBike':         [ 9040,  506,  491,  480,  477],
+  'Uber XL':       [ 3615,  202,  197,  192,  190],
+};
+
+// customer cancel reasons — totales
+const customerCancelAll=[139500,2362,2353,2335,2295,1155];
+const customerCancelLabels=['No especificado','Change of plans','Wrong Address','Driver is not moving','Driver asked to cancel','AC is not working'];
+
+// customer cancel por vehículo
+// Datos reales de Auto del Looker, resto proporcional al volumen de viajes
+const customerCancelByVehicle={
+  'Auto':          [34739,  719,  673,  661,  627,  0],
+  'Go Mini':       [27587,  571,  535,  525,  498,  0],
+  'Go Sedan':      [24517,  507,  475,  466,  442,  0],
+  'Bike':          [21447,  444,  416,  408,  387,  0],
+  'Premier Sedan': [17370,  360,  337,  330,  313,  0],
+  'eBike':         [10212,  212,  198,  194,  184,  0],
+  'Uber XL':       [ 4086,   85,   79,   78,   74,  0],
+};
+
+// VTAT per vehicle
+const vtatAll={Auto:8,Bike:9,eBike:8,'Go Mini':8,'Go Sedan':8,'Premier Sedan':8,'Uber XL':9};
+
+// revenue per vehicle
+const revsAll=[12878422,10338496,9369719,7837697,6275332,3618485,1528032];
+const colorsV=['#2D8CFF','#3DDC84','#BC8CFF','#E3B341','#F0883E','#58A6FF','#8B949E'];
+
+// payment method data per vehicle — orden corregido según PDF Looker
+// [No espec, UPI, Cash, Uber Wallet, Credit Card]  (de mayor a menor en Auto)
+const paymentData=[
+  [12004,11336,6252,3162,2568],  // Auto
+  [9442, 9256, 5137,2357,2006],  // Go Mini
+  [8823, 8153, 4643,2168,1884],  // Go Sedan
+  [7155, 6966, 3854,1793,1527],  // Bike
+  [5796, 5574, 2990,1504,1240],  // Premier Sedan
+  [3376, 3295, 1707, 905, 706],  // eBike
+  [1404, 1329,  784, 387, 278],  // Uber XL
+];
+const payLabels=['No espec.','UPI','Cash','Uber Wallet','Credit Card'];
+// Colores igual al Looker original: azul, naranja, violeta, amarillo, cyan
+const payColors=['rgba(45,140,255,.85)','rgba(240,136,62,.85)','rgba(188,140,255,.85)','rgba(227,179,65,.85)','rgba(32,201,197,.85)'];
+
+// km rate per vehicle
+const kmRates=[20.78,20.72,20.7,20.63,20.59,20.56,20.16];
+const kmLabels=['Go Sedan','Premier Sedan','Bike','Go Mini','Auto','Uber XL','eBike'];
+
+// zones no-driver
+const zones=[['Khandsa',949],['Barakhameba',946],['Saket',931],['Badarpur',921],['Pragati Maidan',920],['Madipur',919],['AIIMS',918],['Mehrauli',915],['Dwarka Sec.',914],['Pataudi C.',907]];
+
+/* ─── CHART.JS DEFAULTS ────────────────────────── */
+const GRID={color:'rgba(48,54,61,.6)'};
+const TICK={color:'#8B949E',font:{family:"'JetBrains Mono'",size:10}};
+const DL_HIDDEN={display:false};
+
+Chart.defaults.color='#8B949E';
+Chart.defaults.borderColor='rgba(48,54,61,.6)';
+Chart.defaults.font.family="'Space Grotesk'";
+
+function tooltip(){
+  return {backgroundColor:'#161B22',borderColor:'#30363D',borderWidth:1,titleColor:'#E6EDF3',bodyColor:'#8B949E',titleFont:{family:"'Space Grotesk'",weight:'600'},bodyFont:{family:"'JetBrains Mono'",size:11},padding:10,cornerRadius:8};
+}
+function baseOpts(extra={}){
+  return {responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:tooltip(),datalabels:DL_HIDDEN},...extra};
+}
+
+/* ─── VIEW SWITCH ───────────────────────────────── */
+function showView(id,btn){
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.filter-bar').forEach(f=>f.style.display='none');
+  document.getElementById(id).classList.add('active');
+  btn.classList.add('active');
+  const n=id.replace('v','');
+  document.getElementById('fb'+n).style.display='flex';
+}
+
+/* ══════════════════════════════════════════════════
+   VIEW 1 — EJECUTIVA
+══════════════════════════════════════════════════ */
+let chartTrend, chartStatus, chartWeekday;
+
+function buildV1(){
+  // TREND
+  chartTrend=new Chart(document.getElementById('chartTrend'),{
+    type:'line',
+    data:{labels:MONTHS,datasets:[
+      {label:'Viajes',data:[...monthlyTrips],borderColor:'#2D8CFF',backgroundColor:'rgba(45,140,255,.08)',
+       tension:.4,pointRadius:5,pointBackgroundColor:'#2D8CFF',yAxisID:'y',fill:true,borderWidth:2},
+      {label:'Ingresos ($M)',data:[...monthlyRev],borderColor:'#E3B341',
+       tension:.4,pointRadius:5,pointBackgroundColor:'#E3B341',yAxisID:'y2',fill:false,borderWidth:2},
+    ]},
+    options:{
+      ...baseOpts(),
+      layout:{padding:{top:36}},
+      plugins:{
+        legend:{
+          display:true,
+          position:'bottom',
+          labels:{color:'#8B949E',font:{family:"'Space Grotesk'",size:12},usePointStyle:true,pointStyleWidth:8,padding:16}
+        },
+        tooltip:tooltip(),
+        datalabels:{
+          display:function(ctx){ return ctx.dataset.data[ctx.dataIndex]!==null; },
+          color:'#E6EDF3',
+          backgroundColor:function(ctx){
+            return ctx.datasetIndex===0?'rgba(45,140,255,.75)':'rgba(227,179,65,.85)';
+          },
+          borderRadius:4,
+          padding:{top:2,bottom:2,left:5,right:5},
+          font:{family:"'JetBrains Mono'",size:9,weight:'500'},
+          formatter:function(v,ctx){
+            if(v===null) return '';
+            return ctx.datasetIndex===0?v.toLocaleString('es-AR'):'$'+v+'M';
+          },
+          // Viajes (ds0) etiqueta arriba, Ingresos (ds1) etiqueta abajo para no chocar
+          anchor:function(ctx){ return ctx.datasetIndex===0?'end':'start'; },
+          align:function(ctx){ return ctx.datasetIndex===0?'top':'bottom'; },
+          offset:4,
+          clamp:true,
+        }
+      },
+      scales:{
+        x:{grid:GRID,ticks:TICK},
+        y:{
+          grid:GRID,
+          ticks:{...TICK,callback:function(v){return v.toLocaleString('es-AR');}},
+          position:'left',
+          min:0,
+          max:16000,
+          title:{display:true,text:'Viajes',color:'#8B949E',font:{size:10,family:"'JetBrains Mono'"}}
+        },
+        y2:{
+          grid:{display:false},
+          ticks:{...TICK,callback:function(v){return '$'+v+'M';}},
+          position:'right',
+          min:0,
+          max:6,
+          title:{display:true,text:'Ingresos',color:'#E3B341',font:{size:10,family:"'JetBrains Mono'"}}
+        },
+      }
+    }
+  });
+
+  // STATUS DONUT
+  const sd=statusAll;
+  chartStatus=new Chart(document.getElementById('chartStatus'),{
+    type:'doughnut',
+    data:{
+      labels:['Completed','Cancelled Driver','Cancelled Customer','No Driver','Incomplete'],
+      datasets:[{data:[sd.completed,sd.cancelled_driver,sd.cancelled_customer,sd.no_driver,sd.incomplete],
+        backgroundColor:['#3DDC84','#F85149','#E3B341','#BC8CFF','#8B949E'],
+        borderColor:'#161B22',borderWidth:3,hoverOffset:6}]
+    },
+    options:{
+      ...baseOpts(),cutout:'60%',
+      plugins:{
+        legend:{display:false},
+        tooltip:{...tooltip(),callbacks:{label:ctx=>` ${ctx.label}: ${ctx.parsed}%`}},
+        datalabels:{
+          display:true,
+          color:'#E6EDF3',
+          font:{family:"'JetBrains Mono'",size:11,weight:'500'},
+          formatter:(v)=>v+'%',
+          textShadowColor:'rgba(0,0,0,.5)',textShadowBlur:4,
+        }
+      }
+    }
+  });
+
+  // WEEKDAY
+  chartWeekday=new Chart(document.getElementById('chartWeekday'),{
+    type:'bar',
+    data:{labels:DAYS,datasets:[{
+      label:'Viajes',data:[...weekdayAll],
+      backgroundColor:'rgba(45,140,255,.65)',borderColor:'#2D8CFF',borderWidth:1,borderRadius:6,hoverBackgroundColor:'#2D8CFF'
+    }]},
+    options:{
+      ...baseOpts(),
+      plugins:{
+        legend:{display:false},tooltip:tooltip(),
+        datalabels:{
+          display:function(ctx){ return ctx.dataset.data[ctx.dataIndex]!==null && ctx.dataset.data[ctx.dataIndex]>0; },
+          color:'#E6EDF3',
+          font:{family:"'JetBrains Mono'",size:9,weight:'500'},
+          formatter:function(v){ return v!=null?v.toLocaleString('es-AR'):''; },
+          anchor:'end',align:'top',offset:3,
+          backgroundColor:'rgba(13,17,23,.6)',
+          borderRadius:4,
+          padding:{top:2,bottom:2,left:4,right:4},
+        }
+      },
+      scales:{
+        x:{grid:{display:false},ticks:TICK},
+        y:{grid:GRID,ticks:{...TICK,callback:v=>v.toLocaleString('es-AR')},min:20000}
+      }
+    }
+  });
+}
+
+function applyV1Filters(){
+  const mSel=document.getElementById('f1-month').value;
+  const sSel=document.getElementById('f1-status').value;
+  const dSel=document.getElementById('f1-day').value;
+  const mi=mSel==='all'?-1:+mSel;
+  const di=dSel==='all'?-1:+dSel;
+
+  /* ── TENDENCIA: filtro mes → punto seleccionado visible, resto null */
+  chartTrend.data.datasets[0].data = monthlyTrips.map((v,i)=> mi===-1?v:(i===mi?v:null));
+  chartTrend.data.datasets[1].data = monthlyRev.map((v,i)=>   mi===-1?v:(i===mi?v:null));
+  chartTrend.data.datasets[0].spanGaps=false;
+  chartTrend.data.datasets[1].spanGaps=false;
+  chartTrend.data.datasets[0].pointRadius=monthlyTrips.map((_,i)=>mi===-1?5:(i===mi?8:0));
+  chartTrend.data.datasets[1].pointRadius=monthlyRev.map((_,i)=>mi===-1?5:(i===mi?8:0));
+  chartTrend.data.datasets[0].backgroundColor=mi===-1?'rgba(45,140,255,.08)':'rgba(45,140,255,.04)';
+  chartTrend.update();
+
+  /* ── DONUT: filtro mes → porcentajes del mes; filtro estado → solo ese segmento */
+  const statusMap=['completed','cancelled_driver','cancelled_customer','no_driver','incomplete'];
+  const sd=mi===-1?statusAll:monthStatusPct[mi];
+  let statusValues=[sd.completed,sd.cancelled_driver,sd.cancelled_customer,sd.no_driver,sd.incomplete];
+  if(sSel!=='all') statusValues=statusValues.map((_,i)=>statusMap[i]===sSel?statusValues[i]:0);
+  chartStatus.data.datasets[0].data=statusValues;
+  chartStatus.update();
+
+  /* ── DÍAS SEMANA: filtro día → solo esa barra, resto null */
+  chartWeekday.data.datasets[0].data=weekdayAll.map((v,i)=>di===-1?v:(i===di?v:null));
+  chartWeekday.data.datasets[0].backgroundColor=weekdayAll.map((_,i)=>
+    di===-1?'rgba(45,140,255,.65)':(i===di?'#2D8CFF':'transparent'));
+  chartWeekday.data.datasets[0].borderColor=weekdayAll.map((_,i)=>
+    di===-1?'#2D8CFF':(i===di?'#2D8CFF':'transparent'));
+  chartWeekday.update();
+
+  /* ── KPIs */
+  const trips=mi===-1?150000:monthlyTrips[mi];
+  const rate=mi===-1?62:monthStatusPct[mi].completed;
+  const rev=mi===-1?51.8:(51.8*monthlyTrips[mi]/150000*12).toFixed(1);
+  document.getElementById('kpi-trips').textContent=trips.toLocaleString('es-AR');
+  document.getElementById('kpi-rate').textContent=rate+'%';
+  document.getElementById('kpi-rev').textContent='$'+rev+'M';
+
+  /* ── CHIP */
+  const parts=[];
+  if(mSel!=='all') parts.push(MONTHS[mi]);
+  if(sSel!=='all') parts.push(sSel.replace('_',' '));
+  if(dSel!=='all') parts.push(DAYS[di]);
+  document.getElementById('f1-chip').textContent=parts.length?parts.join(' · '):(trips.toLocaleString('es-AR')+' viajes');
+}
+
+/* ══════════════════════════════════════════════════
+   VIEW 2 — OPERATIVO
+══════════════════════════════════════════════════ */
+let chartDC, chartCC, chartVtat2;
+
+function buildV2(){
+  chartDC=new Chart(document.getElementById('chartDriverCancel'),{
+    type:'bar',
+    data:{labels:driverCancelLabels,datasets:[{
+      label:'Booking ID',
+      data:[...driverCancelAll],
+      backgroundColor:['rgba(240,136,62,.9)','rgba(240,136,62,.65)','rgba(240,136,62,.55)','rgba(240,136,62,.5)','rgba(240,136,62,.45)'],
+      borderColor:'rgba(240,136,62,.3)',borderWidth:1,borderRadius:4,
+    }]},
+    options:{
+      ...baseOpts(),
+      plugins:{
+        legend:{display:true,labels:{color:'#8B949E',font:{size:10,family:"'Space Grotesk'"},usePointStyle:true,pointStyleWidth:8}},
+        tooltip:{...tooltip(),callbacks:{label:function(ctx){ return ' Booking ID: '+ctx.parsed.y.toLocaleString('es-AR'); }}},
+        datalabels:{
+          display:function(ctx){ return ctx.dataset.data[ctx.dataIndex]>0; },
+          color:'#E6EDF3',
+          font:{family:"'JetBrains Mono'",size:9,weight:'500'},
+          formatter:function(v){
+            if(!v) return '';
+            return v>=1000?v.toLocaleString('es-AR'):String(v);
+          },
+          anchor:function(ctx){
+            var data=ctx.chart.data.datasets[0].data;
+            var max=Math.max.apply(null,data.filter(function(d){return d>0;}));
+            return (ctx.dataset.data[ctx.dataIndex]/max)>0.35?'end':'end';
+          },
+          align:function(ctx){
+            var data=ctx.chart.data.datasets[0].data;
+            var max=Math.max.apply(null,data.filter(function(d){return d>0;}));
+            return (ctx.dataset.data[ctx.dataIndex]/max)>0.35?'start':'top';
+          },
+          offset:6,clamp:true,
+          backgroundColor:function(ctx){
+            var data=ctx.chart.data.datasets[0].data;
+            var max=Math.max.apply(null,data.filter(function(d){return d>0;}));
+            return (ctx.dataset.data[ctx.dataIndex]/max)>0.35?'rgba(0,0,0,.4)':'rgba(13,17,23,.7)';
+          },
+          borderRadius:3,
+          padding:{top:2,bottom:2,left:5,right:5},
+        }
+      },
+      scales:{
+        x:{grid:{display:false},ticks:{...TICK,font:{size:8},maxRotation:15,minRotation:0}},
+        y:{grid:GRID,ticks:{...TICK,callback:function(v){return v>=1000?(v/1000).toFixed(0)+'k':v;}},beginAtZero:true}
+      }
+    }
+  });
+
+  chartCC=new Chart(document.getElementById('chartCustomerCancel'),{
+    type:'bar',
+    data:{labels:customerCancelLabels,datasets:[{
+      label:'Booking ID',
+      data:[...customerCancelAll],
+      backgroundColor:['rgba(227,179,65,.9)','rgba(227,179,65,.65)','rgba(227,179,65,.55)','rgba(227,179,65,.5)','rgba(227,179,65,.45)','rgba(227,179,65,.4)'],
+      borderColor:'rgba(227,179,65,.3)',borderWidth:1,borderRadius:4,
+    }]},
+    options:{
+      ...baseOpts(),
+      plugins:{
+        legend:{display:true,labels:{color:'#8B949E',font:{size:10,family:"'Space Grotesk'"},usePointStyle:true,pointStyleWidth:8}},
+        tooltip:{...tooltip(),callbacks:{label:function(ctx){ return ' Booking ID: '+ctx.parsed.y.toLocaleString('es-AR'); }}},
+        datalabels:{
+          display:function(ctx){ return ctx.dataset.data[ctx.dataIndex]>0; },
+          color:'#E6EDF3',
+          font:{family:"'JetBrains Mono'",size:9,weight:'500'},
+          formatter:function(v){
+            if(!v) return '';
+            return v>=1000?v.toLocaleString('es-AR'):String(v);
+          },
+          anchor:function(ctx){
+            var data=ctx.chart.data.datasets[0].data;
+            var max=Math.max.apply(null,data.filter(function(d){return d>0;}));
+            return (ctx.dataset.data[ctx.dataIndex]/max)>0.35?'end':'end';
+          },
+          align:function(ctx){
+            var data=ctx.chart.data.datasets[0].data;
+            var max=Math.max.apply(null,data.filter(function(d){return d>0;}));
+            return (ctx.dataset.data[ctx.dataIndex]/max)>0.35?'start':'top';
+          },
+          offset:6,clamp:true,
+          backgroundColor:function(ctx){
+            var data=ctx.chart.data.datasets[0].data;
+            var max=Math.max.apply(null,data.filter(function(d){return d>0;}));
+            return (ctx.dataset.data[ctx.dataIndex]/max)>0.35?'rgba(0,0,0,.4)':'rgba(13,17,23,.7)';
+          },
+          borderRadius:3,
+          padding:{top:2,bottom:2,left:5,right:5},
+        }
+      },
+      scales:{
+        x:{grid:{display:false},ticks:{...TICK,font:{size:8},maxRotation:15,minRotation:0}},
+        y:{grid:GRID,ticks:{...TICK,callback:function(v){return v>=1000?(v/1000).toFixed(0)+'k':v;}},beginAtZero:true}
+      }
+    }
+  });
+
+  const vtatVehicles=Object.keys(vtatAll);
+  const vtatVals=Object.values(vtatAll);
+  chartVtat2=new Chart(document.getElementById('chartVtat'),{
+    type:'bar',
+    data:{labels:vtatVehicles,datasets:[{
+      label:'VTAT (min)',data:vtatVals,
+      backgroundColor:'rgba(61,220,132,.7)',borderColor:'#3DDC84',borderWidth:1,borderRadius:6,hoverBackgroundColor:'#3DDC84'
+    }]},
+    options:{
+      ...baseOpts(),
+      plugins:{
+        legend:{display:false},tooltip:tooltip(),
+        datalabels:{
+          display:function(ctx){ return ctx.dataset.data[ctx.dataIndex]!==null; },
+          color:'#E6EDF3',
+          font:{family:"'JetBrains Mono'",size:11,weight:'500'},
+          formatter:function(v){ return v!=null?v+' min':''; },
+          anchor:'end',align:'top',offset:4,
+          backgroundColor:'rgba(61,220,132,.2)',
+          borderRadius:4,
+          padding:{top:2,bottom:2,left:5,right:5},
+        }
+      },
+      scales:{
+        x:{grid:{display:false},ticks:TICK},
+        y:{grid:GRID,ticks:TICK,min:0,max:12}
+      }
+    }
+  });
+
+  buildZoneTable(zones);
+}
+
+function buildZoneTable(data){
+  const maxZ=data[0][1];
+  document.getElementById('zoneTable').innerHTML=data.map(([z,v],i)=>`
+    <tr>
+      <td style="color:var(--muted);font-family:'JetBrains Mono',monospace">${i+1}</td>
+      <td>${z}</td>
+      <td><div class="bar-inline"><div class="bar-bg"><div class="bar-fill" style="width:${(v/maxZ*100).toFixed(0)}%;background:var(--purple)"></div></div><span class="bar-val">${v}</span></div></td>
+    </tr>`).join('');
+}
+
+function applyV2Filters(){
+  var vSel=document.getElementById('f2-vehicle').value;
+  var sSel=document.getElementById('f2-cancel').value;  // booking status
+  var mSel=document.getElementById('f2-month').value;
+  var mFactorFixed={0:0.91,1:0.87,2:0.95,3:0.88,4:0.9,5:0.93,6:0.94,7:0.89,8:0.86,9:0.92,10:0.9,11:0.88};
+  var f=mSel==='all'?1:mFactorFixed[+mSel];
+  var vtatKeys=Object.keys(vtatAll);
+
+  /* ── VTAT: filtro vehículo → solo esa barra, resto null */
+  chartVtat2.data.datasets[0].data=vtatKeys.map(function(k){
+    return vSel==='all'?vtatAll[k]:(k===vSel?vtatAll[k]:null);
+  });
+  chartVtat2.data.datasets[0].backgroundColor=vtatKeys.map(function(k){
+    return vSel==='all'?'rgba(61,220,132,.7)':(k===vSel?'#3DDC84':'transparent');
+  });
+  chartVtat2.data.datasets[0].borderColor=vtatKeys.map(function(k){
+    return vSel==='all'?'#3DDC84':(k===vSel?'#3DDC84':'transparent');
+  });
+  document.getElementById('vtat-insight').textContent=
+    vSel==='all'?'8 min':(vtatAll[vSel]||8)+' min';
+  chartVtat2.update();
+
+  /* ── CANCELACIONES POR BOOKING STATUS ─────────────────────────────
+     Todos los status muestran ambos gráficos siempre.
+     El factor escala los datos según el peso del status en el total:
+     cancelled_driver  → 100% de las razones de conductor
+     cancelled_customer→ 100% de las razones de cliente
+     completed         → proporción completados/total (sin cancelaciones directas)
+     no_driver         → proporción no-driver/total
+     incomplete        → proporción incompletos/total
+     all               → totales globales */
+  var dcCard=document.getElementById('chartDriverCancel').closest('.chart-card');
+  var ccCard=document.getElementById('chartCustomerCancel').closest('.chart-card');
+
+  // Siempre visibles — nunca opacar
+  dcCard.style.opacity='1'; ccCard.style.opacity='1';
+  dcCard.style.pointerEvents='auto'; ccCard.style.pointerEvents='auto';
+
+  /* ── datos base según filtro de vehículo, escalados solo por mes (sin factor status) */
+  var dcBase = vSel==='all' ? driverCancelAll   : driverCancelByVehicle[vSel];
+  var ccBase = vSel==='all' ? customerCancelAll : customerCancelByVehicle[vSel];
+
+  // Booking status controla visibilidad/resaltado, NO escala los datos
+  // cancelled_driver  → resaltar gráfico conductor, opaca cliente
+  // cancelled_customer→ resaltar gráfico cliente, opaca conductor
+  // completed/no_driver/incomplete/all → ambos normales
+  var highlightDriver   = (sSel==='cancelled_driver');
+  var highlightCustomer = (sSel==='cancelled_customer');
+
+  chartDC.style = chartDC.style || {};
+  var dcCardEl = document.getElementById('chartDriverCancel').closest('.chart-card');
+  var ccCardEl = document.getElementById('chartCustomerCancel').closest('.chart-card');
+
+  if(highlightCustomer){
+    dcCardEl.style.opacity='.35'; dcCardEl.style.pointerEvents='none';
+    ccCardEl.style.opacity='1';   ccCardEl.style.pointerEvents='auto';
+  } else if(highlightDriver){
+    dcCardEl.style.opacity='1';   dcCardEl.style.pointerEvents='auto';
+    ccCardEl.style.opacity='.35'; ccCardEl.style.pointerEvents='none';
+  } else {
+    dcCardEl.style.opacity='1';   dcCardEl.style.pointerEvents='auto';
+    ccCardEl.style.opacity='1';   ccCardEl.style.pointerEvents='auto';
+  }
+
+  chartDC.data.datasets[0].data = dcBase.map(function(v){ return Math.round(v*f); });
+  chartCC.data.datasets[0].data = ccBase.map(function(v){ return Math.round(v*f); });
+
+  /* ── colores: resaltar barra más alta */
+  var dcData = chartDC.data.datasets[0].data;
+  var ccData = chartCC.data.datasets[0].data;
+  var dcMax  = Math.max.apply(null, dcData.filter(function(d){return d;}));
+  var ccMax  = Math.max.apply(null, ccData.filter(function(d){return d;}));
+
+  var dcColorsAll=['rgba(248,81,73,.85)','rgba(248,81,73,.55)','rgba(248,81,73,.45)','rgba(248,81,73,.4)','rgba(248,81,73,.35)'];
+  var ccColorsAll=['rgba(227,179,65,.85)','rgba(227,179,65,.55)','rgba(227,179,65,.45)','rgba(227,179,65,.4)','rgba(227,179,65,.35)','rgba(227,179,65,.3)'];
+
+  chartDC.data.datasets[0].backgroundColor = dcData.map(function(v,i){
+    if(vSel==='all' && sSel==='all') return dcColorsAll[i];
+    return (v&&v===dcMax)?'rgba(248,81,73,.9)':'rgba(248,81,73,.4)';
+  });
+  chartCC.data.datasets[0].backgroundColor = ccData.map(function(v,i){
+    if(vSel==='all' && sSel==='all') return ccColorsAll[i];
+    return (v&&v===ccMax)?'rgba(227,179,65,.9)':'rgba(227,179,65,.4)';
+  });
+
+  chartDC.update();
+  chartCC.update();
+
+  /* ── CHIP */
+  var statusLabels={
+    'completed':'Completed','cancelled_driver':'Cancelled by Driver',
+    'cancelled_customer':'Cancelled by Customer','no_driver':'No Driver Found','incomplete':'Incomplete'
+  };
+  var parts=[];
+  if(vSel!=='all') parts.push(vSel);
+  if(sSel!=='all') parts.push(statusLabels[sSel]||sSel);
+  if(mSel!=='all') parts.push(MONTHS[+mSel]);
+  document.getElementById('f2-chip').textContent=parts.length?'Vista: '+parts.join(' · '):'Vista: Todos';
+}
+
+/* ══════════════════════════════════════════════════
+   VIEW 3 — FLOTA E INGRESOS
+══════════════════════════════════════════════════ */
+let chartRev, chartPay, chartKm2;
+
+function buildV3(){
+  chartRev=new Chart(document.getElementById('chartRevVehicle'),{
+    type:'bar',
+    data:{labels:VEHICLES,datasets:[{
+      label:'Ingresos',data:[...revsAll],
+      backgroundColor:colorsV.map(c=>c+'bb'),borderColor:colorsV,borderWidth:1,borderRadius:6,
+    }]},
+    options:{
+      ...baseOpts(),
+      plugins:{
+        legend:{display:false},
+        tooltip:{...tooltip(),callbacks:{label:ctx=>' $'+ctx.parsed.y.toLocaleString('es-AR')}},
+        datalabels:{
+          display:true,color:'#E6EDF3',
+          font:{family:"'JetBrains Mono'",size:9,weight:'500'},
+          formatter:v=>'$'+(v/1000000).toFixed(1)+'M',
+          anchor:'end',align:'top',offset:2,
+        }
+      },
+      scales:{
+        x:{grid:{display:false},ticks:{...TICK,font:{size:9}}},
+        y:{grid:GRID,ticks:{...TICK,callback:v=>'$'+(v/1000000).toFixed(1)+'M'}}
+      }
+    }
+  });
+
+  chartPay=new Chart(document.getElementById('chartPayment'),{
+    type:'bar',
+    data:{
+      labels:VEHICLES,
+      datasets:payLabels.map((label,pi)=>({
+        label,
+        data:paymentData.map(row=>row[pi]),
+        backgroundColor:payColors[pi],
+        borderRadius:0,
+      }))
+    },
+    options:{
+      ...baseOpts(),
+      plugins:{
+        legend:{display:true,labels:{color:'#8B949E',font:{size:10,family:"'JetBrains Mono'"},usePointStyle:true,pointStyleWidth:6,boxHeight:6,padding:12}},
+        tooltip:{...tooltip(),callbacks:{
+          title:function(items){
+            return items[0]?items[0].label:'';
+          },
+          label:function(ctx){
+            var v=ctx.parsed.y;
+            var vIdx=ctx.dataIndex;
+            var total=paymentData[vIdx].reduce(function(a,b){return a+b;},0);
+            var pct=total>0?((v/total)*100).toFixed(2):0;
+            return ' '+ctx.dataset.label+':  '+v.toLocaleString('es-AR')+' ('+pct+' %)';
+          }
+        }},
+        datalabels:{
+          display:function(ctx){
+            if(ctx.dataset.data[ctx.dataIndex]===0) return false;
+            var v=ctx.dataset.data[ctx.dataIndex];
+            var total=paymentData[ctx.dataIndex].reduce(function(a,b){return a+b;},0);
+            if(total===0) return false;
+            // siempre mostrar si hay al menos 7px de altura
+            var chartH=ctx.chart.chartArea?ctx.chart.chartArea.height:320;
+            var segH=(v/total)*chartH;
+            return segH>=7;
+          },
+          color:'#E6EDF3',
+          font:function(ctx){
+            var v=ctx.dataset.data[ctx.dataIndex];
+            var total=paymentData[ctx.dataIndex].reduce(function(a,b){return a+b;},0);
+            var chartH=ctx.chart.chartArea?ctx.chart.chartArea.height:320;
+            var segH=(v/total)*chartH;
+            var visibleCols=ctx.chart.data.datasets[0].data.filter(function(d){return d>0;}).length;
+            // segmento muy chico (Uber Wallet, Credit Card en cols pequeñas): size 7
+            if(segH<16) return {family:"'JetBrains Mono'",size:7,weight:'500'};
+            // segmento mediano
+            if(segH<30) return {family:"'JetBrains Mono'",size:8,weight:'500'};
+            // 1 columna o segmento grande
+            if(visibleCols<=1) return {family:"'JetBrains Mono'",size:10,weight:'500'};
+            return {family:"'JetBrains Mono'",size:9,weight:'500'};
+          },
+          formatter:function(v,ctx){
+            var visibleCols=ctx.chart.data.datasets[0].data.filter(function(d){return d>0;}).length;
+            var total=paymentData[ctx.dataIndex].reduce(function(a,b){return a+b;},0);
+            var chartH=ctx.chart.chartArea?ctx.chart.chartArea.height:320;
+            var segH=(v/total)*chartH;
+            // 1 columna: número completo
+            if(visibleCols<=1) return v.toLocaleString('es-AR');
+            // segmento grande (>=40px): número completo
+            if(segH>=40) return v.toLocaleString('es-AR');
+            // segmento mediano (>=16px): número abreviado
+            if(segH>=16){
+              return v>=1000?(v/1000).toFixed(1)+'k':String(v);
+            }
+            // segmento chico (<16px): número abreviado compacto
+            return v>=1000?(v/1000).toFixed(0)+'k':String(v);
+          },
+          anchor:'center',align:'center',
+          textAlign:'center',
+          clip:true,
+          padding:{top:0,bottom:0,left:1,right:1},
+        }
+      },
+      scales:{
+        x:{grid:{display:false},ticks:{...TICK,font:{size:9}},stacked:true},
+        y:{grid:GRID,ticks:{...TICK,callback:v=>v.toLocaleString('es-AR')},stacked:true}
+      }
+    }
+  });
+
+  chartKm2=new Chart(document.getElementById('chartKm'),{
+    type:'bar',
+    data:{
+      labels:kmLabels,
+      datasets:[{
+        label:'$/km',data:[...kmRates],
+        backgroundColor:kmRates.map((_,i)=>i===0?'#3DDC84bb':i===6?'#F85149bb':'rgba(45,140,255,.55)'),
+        borderColor:kmRates.map((_,i)=>i===0?'#3DDC84':i===6?'#F85149':'#2D8CFF'),
+        borderWidth:1,borderRadius:6,
+      }]
+    },
+    options:{
+      ...baseOpts(),
+      plugins:{
+        legend:{display:false},
+        tooltip:{...tooltip(),callbacks:{label:ctx=>' $'+ctx.parsed.y+'/km'}},
+        datalabels:{
+          display:true,color:'#E6EDF3',
+          font:{family:"'JetBrains Mono'",size:10,weight:'500'},
+          formatter:v=>'$'+v,
+          anchor:'end',align:'top',offset:2,
+        }
+      },
+      scales:{
+        x:{grid:{display:false},ticks:{...TICK,font:{size:9}}},
+        y:{grid:GRID,ticks:{...TICK,callback:v=>'$'+v},min:19.5,max:21.5}
+      }
+    }
+  });
+
+  buildVehicleTable(revsAll,VEHICLES);
+}
+
+function buildVehicleTable(revData,labels){
+  const avgs=[507,508,512,510,510,504,502];
+  const maxR=Math.max(...revData);
+  document.getElementById('vehicleTable').innerHTML=labels.map((v,i)=>`
+    <tr>
+      <td style="font-weight:500">${v}</td>
+      <td><span class="badge badge-green">$${avgs[i]}</span></td>
+      <td><div class="bar-inline"><div class="bar-bg"><div class="bar-fill" style="width:${(revData[i]/maxR*100).toFixed(0)}%;background:var(--blue)"></div></div><span class="bar-val">$${(revData[i]/1000000).toFixed(1)}M</span></div></td>
+    </tr>`).join('');
+}
+
+function applyV3Filters(){
+  const vSel = document.getElementById('f3-vehicle').value;   // 'all' | '0'..'6'
+  const pSel = document.getElementById('f3-payment').value;   // 'all' | '0'..'4'
+  const vi   = vSel === 'all' ? -1 : +vSel;
+  const pi   = pSel === 'all' ? -1 : +pSel;
+
+  /* ── 1. INGRESO TOTAL POR VEHÍCULO ──────────────────────────────
+     Filtro vehículo  → muestra solo la barra seleccionada (resto en 0)
+     Filtro pago      → escala cada barra por el peso del método elegido */
+  const revFiltered = VEHICLES.map((_, i) => {
+    if (vi !== -1 && i !== vi) return 0;                    // otro vehículo → 0
+    const base = revsAll[i];
+    if (pi !== -1) {
+      // peso del método de pago en ese vehículo
+      const rowTotal = paymentData[i].reduce((a,b)=>a+b,0);
+      return Math.round(base * (paymentData[i][pi] / rowTotal));
+    }
+    return base;
+  });
+  chartRev.data.datasets[0].data = revFiltered;
+  chartRev.data.datasets[0].backgroundColor = VEHICLES.map((_,i) =>
+    (vi === -1 || i === vi) ? colorsV[i]+'bb' : colorsV[i]+'1a');
+  chartRev.data.datasets[0].borderColor = VEHICLES.map((_,i) =>
+    (vi === -1 || i === vi) ? colorsV[i] : colorsV[i]+'33');
+  chartRev.update();
+
+  /* ── 2. MÉTODOS DE PAGO ──────────────────────────────────────────
+     Filtro vehículo  → muestra solo la columna del vehículo, resto en 0
+     Filtro pago      → apaga las demás capas (método no seleccionado → 0)
+     Ambos combinados → columna del vehículo solo con el método elegido */
+  chartPay.data.datasets.forEach((ds, dsIdx) => {
+    ds.data = VEHICLES.map((_, vIdx) => {
+      const methodMatch = pi === -1 || dsIdx === pi;
+      const vehicleMatch = vi === -1 || vIdx === vi;
+      if (methodMatch && vehicleMatch) return paymentData[vIdx][dsIdx];
+      return 0;
+    });
+    // dim datasets que no son el método seleccionado
+    ds.backgroundColor = (pi === -1 || dsIdx === pi)
+      ? payColors[dsIdx]
+      : payColors[dsIdx].replace(/[\d.]+\)$/, '0.08)');
+  });
+  chartPay.update();
+
+  /* ── 3. TARIFA POR KM ────────────────────────────────────────────
+     kmLabels tienen orden distinto a VEHICLES, hay que mapear por nombre.
+     Filtro vehículo  → muestra solo esa barra, resto en null (oculto)
+     Filtro pago      → no afecta tarifa/km (es independiente del pago) */
+  const selectedVName = vi !== -1 ? VEHICLES[vi] : null;
+  // kmData: null hace que Chart.js no dibuje la barra
+  chartKm2.data.datasets[0].data = kmLabels.map((label, i) => {
+    if (selectedVName !== null && label !== selectedVName) return null;
+    return kmRates[i];
+  });
+  // colores: Go Sedan=verde, eBike=rojo, resto=azul (solo para la barra visible)
+  chartKm2.data.datasets[0].backgroundColor = kmLabels.map((label, i) => {
+    if (selectedVName !== null && label !== selectedVName) return 'transparent';
+    if (i === 0) return '#3DDC84bb';
+    if (i === 6) return '#F85149bb';
+    return 'rgba(45,140,255,.7)';
+  });
+  chartKm2.data.datasets[0].borderColor = kmLabels.map((label, i) => {
+    if (selectedVName !== null && label !== selectedVName) return 'transparent';
+    if (i === 0) return '#3DDC84';
+    if (i === 6) return '#F85149';
+    return '#2D8CFF';
+  });
+  chartKm2.options.plugins.datalabels.color = function(ctx) {
+    const label = kmLabels[ctx.dataIndex];
+    return (selectedVName === null || label === selectedVName) ? '#E6EDF3' : 'transparent';
+  };
+  chartKm2.update();
+
+  /* ── 4. TABLA BOOKING VALUE ──────────────────────────────────────
+     Filtro vehículo  → muestra solo esa fila
+     Filtro pago      → ajusta el valor total por el peso del método */
+  const tableRevs = VEHICLES.map((_, i) => {
+    if (vi !== -1 && i !== vi) return null;   // null → ocultar fila
+    const base = revsAll[i];
+    if (pi !== -1) {
+      const rowTotal = paymentData[i].reduce((a,b)=>a+b,0);
+      return Math.round(base * (paymentData[i][pi] / rowTotal));
+    }
+    return base;
+  });
+  buildVehicleTable(tableRevs, VEHICLES);
+
+  /* ── CHIP ────────────────────────────────────────────────────────*/
+  const parts = [];
+  if (vi !== -1) parts.push(VEHICLES[vi]);
+  if (pi !== -1) parts.push(payLabels[pi]);
+  const totalFiltered = revFiltered.reduce((a,b)=>a+b,0);
+  document.getElementById('f3-chip').textContent =
+    parts.length ? parts.join(' · ') + '  —  $'+(totalFiltered/1000000).toFixed(1)+'M' : 'Total: $51.8M';
+}
+
+// Datos del scatter: [avg booking $, ride distance km, booking ID count]
+const scatterData={
+  'Auto':          [507, 24.6, 37419],
+  'Go Mini':       [508, 24.6, 29806],
+  'Go Sedan':      [512, 24.6, 27141],
+  'Bike':          [510, 24.6, 22517],
+  'Premier Sedan': [510, 24.6, 18111],
+  'eBike':         [504, 25.0, 10557],
+  'Uber XL':       [502, 24.4,  4449],
+};
+
+function buildVehicleTable(revData, labels){
+  const piSel = document.getElementById('f3-payment').value;
+  document.getElementById('vehicleTable').innerHTML = labels.map(function(v, i){
+    if(revData[i]===null || revData[i]===0) return '';
+    var sd  = scatterData[v] || [0,0,0];
+    var avg = sd[0];
+    if(piSel !== 'all'){
+      var rowTotal = paymentData[i].reduce(function(a,b){return a+b;},0);
+      avg = rowTotal > 0 ? Math.round(sd[0] * (paymentData[i][+piSel] / rowTotal)) : 0;
+    }
+    return '<tr>'
+      + '<td style="font-weight:500">' + v + '</td>'
+      + '<td><span class="badge badge-green">$' + avg + '</span></td>'
+      + '<td class="mono-cell">' + sd[1] + ' km</td>'
+      + '<td class="mono-cell">' + sd[2].toLocaleString('es-AR') + '</td>'
+      + '</tr>';
+  }).join('');
+}
+
+/* ─── INIT ──────────────────────────────────────── */
+buildV1();
+buildV2();
+buildV3();
+</script>
+</body>
+</html>
